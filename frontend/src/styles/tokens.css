@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #1f2b3d;
+  --muted: #718093;
+  --line: #e4e8e7;
+  --canvas: #f7f8f7;
+  --blue: #536fd8;
+  --navy: #293b5d;
+  --pale: #edf1ff;
+  --orange: #ec9a55;
+  --green: #539577;
+  --white: #fff;
+  --shadow: 0 12px 32px rgba(31, 43, 61, 0.07);
+
+  /* Compatibility bindings */
+  --color-paper: var(--canvas);
+  --color-surface: #ffffff;
+  --color-ink: var(--ink);
+  --color-ink-2: var(--muted);
+  --color-line: var(--line);
+  --color-pen: var(--blue);
+  --color-pen-hover: #405bbd;
+  --color-highlight: #FFE27A;
+  --color-strong: var(--green);
+  --color-strong-tint: #edf9f1;
+  --color-developing: var(--orange);
+  --color-developing-tint: #fff0df;
+  --color-weak: #de735e;
+  --color-weak-tint: #fff2f0;
+
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-code: "DM Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  font: 14px "DM Sans", sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, textarea {
+  font: inherit;
+}
+
+/* Animations */
+@keyframes in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-view-in {
+  animation: in 0.25s ease-out forwards;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd3dc;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9aa7b5;
+}
+
+/* Premium Glass & Ambient Tokens */
+.glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(228, 232, 231, 0.9);
+  box-shadow: 0 12px 36px -4px rgba(31, 43, 61, 0.06), 0 1px 2px rgba(31, 43, 61, 0.04);
+}
+
+.glow-panel {
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glow-panel:focus-within {
+  box-shadow: 0 0 0 3px rgba(83, 111, 216, 0.18), 0 16px 40px -8px rgba(83, 111, 216, 0.2);
+  border-color: rgba(83, 111, 216, 0.7);
+}
+
+.ambient-mesh {
+  background-image: 
+    radial-gradient(at 15% 15%, rgba(83, 111, 216, 0.06) 0px, transparent 55%),
+    radial-gradient(at 85% 10%, rgba(236, 154, 85, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(83, 149, 119, 0.04) 0px, transparent 60%);
+}
+
