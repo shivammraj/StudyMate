@@ -35,6 +35,8 @@ jobs:
 
       - name: Build fullstack
         run: npm run build
+        env:
+          VITE_BASE_PATH: '/StudyMate/'
 
       - name: Copy index.html to 404.html for SPA routing fallback
         run: cp frontend/dist/index.html frontend/dist/404.html

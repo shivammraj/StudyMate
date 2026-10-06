@@ -23,7 +23,7 @@ import { Styleguide } from './pages/Styleguide.js';
 export const App: React.FC = () => {
   return (
     <StudyMateProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <AppLayout>
           <Routes>
             {/* Root redirects to Dashboard */}
