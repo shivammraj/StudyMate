@@ -8,10 +8,12 @@ import { fileURLToPath } from 'url';
 import { apiRouter } from './routes/index.js';
 import { requestLogger, errorHandler } from './middleware/errorHandler.js';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 export const app = express();
 const port = process.env.PORT || 8787;
@@ -68,9 +70,11 @@ if (process.env.NODE_ENV === 'production') {
 // Global error handler
 app.use(errorHandler);
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   app.listen(port, () => {
     console.log(`🚀 StudyMate Backend running at http://localhost:${port}`);
     console.log(`   AI Provider: ${process.env.AI_PROVIDER || 'mock'}`);
   });
 }
+
+export default app;

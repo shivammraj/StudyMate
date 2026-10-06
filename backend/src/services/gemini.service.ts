@@ -52,20 +52,38 @@ export class GeminiService {
   }
 
   private async callGemini<T>(opts: GenerateOptions<T>): Promise<T> {
-    const apiKey = process.env.GEMINI_API_KEY;
+    let apiKey = (process.env.GEMINI_API_KEY || '').trim().replace(/^["']|["']$/g, '');
     if (!apiKey) {
       throw new AiServiceError('INTERNAL', 'GEMINI_API_KEY is not configured on server', false);
     }
+    if (apiKey.startsWith('Ab8RN6')) {
+      apiKey = 'AQ.' + apiKey;
+    }
 
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const candidateModels = [primaryModel, 'gemini-3.5-flash'].filter(
+      (m, idx, arr) => arr.indexOf(m) === idx
+    );
     const client = new GoogleGenAI({ apiKey });
     const timeoutMs = opts.timeoutMs ?? 25000;
 
-    const callApi = async (extraInstruction = ''): Promise<string> => {
+    const cleanJsonText = (str: string): string => {
+      let cleaned = str.trim();
+      if (cleaned.startsWith('```json')) {
+        cleaned = cleaned.replace(/^```json\s*/i, '').replace(/\s*```$/, '');
+      } else if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      return cleaned.trim();
+    };
+
+    let activeModel = candidateModels[0];
+
+    const callApi = async (extraInstruction = '', model = activeModel): Promise<string> => {
       const fullPrompt = `${opts.system}\n\nIMPORTANT: Return strictly raw valid JSON adhering to the required schema. Do not wrap in markdown fences or add explanatory text.\n${extraInstruction}\n\n${opts.user}`;
 
       const responsePromise = client.models.generateContent({
-        model: modelName,
+        model,
         contents: fullPrompt,
         config: {
           temperature: 0.2,
@@ -85,15 +103,63 @@ export class GeminiService {
     };
 
     let rawText = '';
-    try {
-      rawText = await callApi();
-    } catch (err: any) {
-      if (err instanceof AiServiceError) throw err;
-      throw new AiServiceError('AI_TIMEOUT', err.message || 'Error communicating with Gemini', true);
+    let lastError: any = null;
+
+    for (const modelToTry of candidateModels) {
+      try {
+        activeModel = modelToTry;
+        rawText = await callApi('', modelToTry);
+        if (rawText) break;
+      } catch (err: any) {
+        lastError = err;
+        const msg = String(err?.message || '');
+        // If high demand (503) or not found (404), try fallback model
+        if (msg.includes('503') || msg.includes('demand') || msg.includes('404')) {
+          continue;
+        }
+        if (err instanceof AiServiceError) throw err;
+      }
     }
 
+    if (!rawText) {
+      if (lastError instanceof AiServiceError) throw lastError;
+      throw new AiServiceError('AI_TIMEOUT', lastError?.message || 'Error communicating with Gemini', true);
+    }
+
+    const normalizeParsed = (obj: any): any => {
+      if (obj && typeof obj === 'object') {
+        if (!obj.topic && obj.title) {
+          obj.topic = String(obj.title).toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 40);
+        }
+        if (typeof obj.detected === 'string') {
+          obj.detected = {
+            subject: obj.subject || 'physics',
+            topic: String(obj.detected).slice(0, 40),
+            difficulty: 'intermediate',
+            method: 'concept',
+          };
+        } else if (!obj.detected && (obj.steps || obj.bigIdea)) {
+          obj.detected = {
+            subject: obj.subject || 'physics',
+            topic: String(obj.topic || obj.title || 'General Engineering').slice(0, 40),
+            difficulty: 'intermediate',
+            method: 'concept',
+          };
+        } else if (obj.detected && typeof obj.detected === 'object') {
+          if (!obj.detected.subject) obj.detected.subject = 'physics';
+          if (!obj.detected.difficulty) obj.detected.difficulty = 'intermediate';
+          if (!obj.detected.method) obj.detected.method = 'concept';
+          if (!obj.detected.topic) obj.detected.topic = String(obj.title || 'Concept').slice(0, 40);
+        }
+        if (!obj.visual && obj.steps) {
+          obj.visual = { type: 'none' };
+        }
+      }
+      return obj;
+    };
+
     try {
-      const parsed = JSON.parse(rawText);
+      const parsed = normalizeParsed(JSON.parse(cleanJsonText(rawText)));
       return opts.schema.parse(parsed);
     } catch (firstErr: any) {
       // Retry once with validation feedback
@@ -101,7 +167,7 @@ export class GeminiService {
         const retryText = await callApi(
           `Previous response failed validation with error: ${firstErr.message}. Fix and return valid JSON matching schema.`
         );
-        const retryParsed = JSON.parse(retryText);
+        const retryParsed = normalizeParsed(JSON.parse(cleanJsonText(retryText)));
         return opts.schema.parse(retryParsed);
       } catch (retryErr: any) {
         throw new AiServiceError(

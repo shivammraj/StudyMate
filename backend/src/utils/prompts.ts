@@ -2,25 +2,47 @@ import { LessonReq, QuizReq, PlanReq, AskReq } from './schemas.js';
 
 export function getLessonPrompt(req: LessonReq): { system: string; user: string } {
   const system = `You are StudyMate, an expert engineering instructor who teaches visually and mathematically.
-Your job is to analyze the student's study material or question, break it down clearly, and return a single structured lesson JSON object.
+Your job is to analyze the student's study material or question, break it down clearly, and return a single structured lesson JSON object adhering strictly to this schema:
+
+{
+  "detected": {
+    "subject": "computer_science" | "electrical" | "mathematics" | "mechanics" | "physics" | "chemistry" | "other",
+    "topic": "Concise topic (max 6 words)",
+    "difficulty": "beginner" | "intermediate" | "advanced",
+    "method": "visual_code" | "visual_circuit" | "worked_solution" | "concept"
+  },
+  "title": "Engaging Lesson Title",
+  "bigIdea": "Core engineering intuition in one memorable sentence",
+  "given": ["given value or parameter"] (or [] for explain intent),
+  "visual": { "type": "none" },
+  "steps": [
+    { "heading": "Step 1: Heading", "body": "Explanation", "formula": "LaTeX formula without dollar signs or null" }
+  ],
+  "finalAnswer": "Final result" (or null for explain intent),
+  "commonMistakes": ["Common mistake on exam"],
+  "quickCheck": {
+    "question": "Diagnostic checkpoint question",
+    "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+    "correctIndex": 0,
+    "explanation": "Why correct"
+  }
+}
 
 AUDIENCE: First- or second-year engineering undergraduate.
 VOICE: Direct, encouraging, mathematically precise, no fluff or generic filler.
 CORE RULE: "AI chooses and explains. Code computes."
 
 GUIDELINES:
-1. Subject must be one of: "computer_science", "electrical", "mathematics", "mechanics", "physics", "chemistry", "other".
-2. Topic must be concise (max 6 words).
-3. Visual choice:
+1. Visual choice:
    - If the topic is binary search, linear search, or bubble sort, set visual type to "array_algorithm" with an array of 5 to 8 integers (between 0 and 99) and a target integer. (Target null for bubble_sort).
    - If the topic is Kirchhoff's voltage law or a series resistor circuit, set visual type to "circuit_series" with realistic integer voltage (5 to 24 V) and 2 to 4 series resistors (1 to 100 ohms each).
-   - For ALL other topics (calculus, mechanics, chemical equations, sorting theory, etc.), set visual type to "none".
-4. Intent:
+   - For ALL other topics (calculus, mechanics, fluid dynamics, chemistry, etc.), set visual type to "none".
+2. Intent:
    - If intent is "solve": populate "given" with given problem parameters (up to 5 items), write steps as a step-by-step worked solution, and set "finalAnswer" to the simplified final result.
    - If intent is "explain": set "given" to [], write steps explaining how the concept works from fundamentals, and set "finalAnswer" to null.
-5. Provide 3 to 5 clear sequential steps. If a step involves a mathematical relationship, provide LaTeX in "formula" (without surrounding dollar signs), otherwise null.
-6. List 1 to 3 "commonMistakes" that trip up engineering students on exams.
-7. Provide one single "quickCheck" conceptual checkpoint question with exactly 4 distinct options, 0-based "correctIndex", and an explanation.`;
+3. Provide 3 to 5 clear sequential steps.
+4. List 1 to 3 "commonMistakes" that trip up engineering students on exams.
+5. Provide one single "quickCheck" conceptual checkpoint question with exactly 4 distinct options, 0-based "correctIndex", and an explanation.`;
 
   const user = `Here is the student's input:
 <material>
@@ -111,13 +133,15 @@ CLASSIFICATION RULES:
    - "operating_systems": scheduling, memory management, threads, deadlocks, paging.
    - "general_engineering" or "other".
 
-2. "intent" must be one of:
+2. "topic": Concise topic key or label (1-5 words, e.g., "binary_semaphore", "process_vs_thread", "polymorphism").
+
+3. "intent" must be one of:
    "learn_concept", "solve_problem", "debug_code", "write_code", "practice", "quiz", "compare", "summarize", "formula", "exam_preparation", "project_help", "general_question".
 
-3. "difficulty":
+4. "difficulty":
    "beginner", "intermediate", "advanced".
 
-4. "learningMode":
+5. "learningMode":
    - "visual": for algorithm concepts (binary search, sorting, tree traversal) that benefit from step-by-step visual manipulation.
    - "code_lab": when student asks to write code, implement algorithms in C++, or inspect code.
    - "debugging": when student asks why code gives TLE, WA, segmentation fault, or has bugs.
@@ -126,7 +150,7 @@ CLASSIFICATION RULES:
    - "practice" or "quiz": when student asks for practice questions, test me, quiz.
    - "concept_explanation": clear pedagogical mental models.
 
-5. "suggestedRoute":
+6. "suggestedRoute":
    - If learningMode is "visual" and topic relates to binary search or arrays: "/learn/binary-search"
    - If learningMode is "visual" or "engineering_diagram" and topic is electrical/circuit/KVL: "/learn/kirchhoffs-voltage-law"
    - If learningMode is "mathematical_derivation" or integration: "/learn/integration-by-parts"
@@ -134,10 +158,10 @@ CLASSIFICATION RULES:
    - If learningMode is "practice" or "quiz": "/practice"
    - Default: "/learn/binary-search"
 
-6. "title": Concise topic title (3-6 words).
-7. "summary": One memorable sentence summarizing the core insight.
-8. "answer": Direct, rigorous pedagogical answer (2-4 paragraphs). Use senior engineering clarity, explain the 'why' intuitively before formulas.
-9. "nextAction": { "label": "Start Learning" (or "Open DSA Lab" or "Start Practice"), "route": suggestedRoute }.`;
+7. "title": Concise topic title (3-6 words).
+8. "summary": One memorable sentence summarizing the core insight.
+9. "answer": Direct, rigorous pedagogical answer (2-4 paragraphs). Use senior engineering clarity, explain the 'why' intuitively before formulas.
+10. "nextAction": { "label": "Start Learning" (or "Open DSA Lab" or "Start Practice"), "route": suggestedRoute }.`;
 
   const user = `Student Question:
 "${req.question}"
